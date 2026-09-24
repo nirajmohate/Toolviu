@@ -1,0 +1,46 @@
+# ---- dependencies ----
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# ---- build ----
+FROM node:22-alpine AS build
+WORKDIR /app
+# NEXT_PUBLIC_* values and API_URL are baked in at build time.
+ARG API_URL=http://api:5000
+ARG NEXT_PUBLIC_SITE_NAME=Toolviu
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_CONTACT_EMAIL=hello@example.com
+ARG NEXT_PUBLIC_ADSENSE_CLIENT=
+ARG NEXT_PUBLIC_ADSENSE_SLOT_TOP=
+ARG NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
+ARG NEXT_PUBLIC_GA_ID=
+ARG NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
+ENV API_URL=$API_URL \
+    NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME \
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL \
+    NEXT_PUBLIC_ADSENSE_CLIENT=$NEXT_PUBLIC_ADSENSE_CLIENT \
+    NEXT_PUBLIC_ADSENSE_SLOT_TOP=$NEXT_PUBLIC_ADSENSE_SLOT_TOP \
+    NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=$NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM \
+    NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID \
+    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=$NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# ---- run ----
+FROM node:22-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
+# API_URL is also read at runtime by the home page (popular tools)
+ARG API_URL=http://api:5000
+ENV API_URL=$API_URL
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]
