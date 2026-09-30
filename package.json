@@ -1,0 +1,13 @@
+{
+  "name": "toolviu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Free developer tools website: Next.js + Tailwind, 100% client-side, no backend, no database",
+  "scripts": {
+    "install:all": "npm --prefix client install",
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix client start",
+    "test": "npm --prefix client run typecheck"
+  }
+}
